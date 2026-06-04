@@ -1,0 +1,13 @@
+{
+  "Plugin-Class": "lol.tilley.pathfinder.PluginMain",
+  "Name": "${project.plugin_name}",
+  "Version": "${project.plugin_version}",
+  "Description": "pathfind an optimal path through rusherhack's highway system",
+  "URL": "https://github.com/tillay-rh-plugins/rusherhack-pathfinder",
+  "Authors": [
+    "tilley"
+  ],
+  "Minecraft-Versions": [
+    "${project.minecraft_version}"
+  ]
+}
