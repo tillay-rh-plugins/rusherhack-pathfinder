@@ -49,7 +49,10 @@ public class PathingWindow extends ResizeableWindow {
         buttonCombo.addContent(pathButton);
         buttonCombo.addContent(copyButton);
 
-        this.directionsView = new RichTextView("Directions", this);
+        this.directionsView = new RichTextView("Directions", this) {
+            @Override
+            protected boolean shouldAutoJumpToBottom() { return false; }
+        };
 
         SimpleView mainView = new SimpleView("Navigation", this, List.of(
                 new TextComponent(this, "Start (leave blank for current position):"),
@@ -66,9 +69,14 @@ public class PathingWindow extends ResizeableWindow {
     private void calculatePath() {
         double sx = startXField.getValue().isEmpty() && mc.player != null ? mc.player.getX() : parseDistance(startXField.getValue());
         double sz = startZField.getValue().isEmpty() && mc.player != null ? mc.player.getZ() : parseDistance(startZField.getValue());
-        double ex = endXField.getValue().isEmpty() && mc.player != null ? mc.player.getX() : parseDistance(endXField.getValue());
-        double ez = endZField.getValue().isEmpty() && mc.player != null ? mc.player.getZ() : parseDistance(endZField.getValue());
         directionsView.clear();
+
+        if (endXField.getValue().isEmpty() || endZField.getValue().isEmpty()) {
+            directionsView.add(Component.literal("Error: Please add destination coordinates"), -1);
+            return;
+        }
+        double ex = parseDistance(endXField.getValue());
+        double ez = parseDistance(endZField.getValue());
         try {
             calculateRoute(sx, sz, ex, ez);
         } catch (Exception e) {
