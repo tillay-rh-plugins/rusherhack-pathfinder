@@ -5,11 +5,18 @@ import com.google.gson.*;
 import java.net.*;
 import java.io.*;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class CrunchData {
 
     public record RoadSegment(double p1X, double p1Z, double p2X, double p2Z) {}
     public record Road(String name, boolean paved, List<RoadSegment> segments) {}
+    private static List<Road> cachedNetwork = null;
+    private static List<Road> currentPath = new ArrayList<>();
+    private static final List<double[]> currentSteps = new ArrayList<>();
+    private static final List<String> currentDirections = new ArrayList<>();
+    private static final List<String> currentRoadNames = new ArrayList<>();
+    public static List<String> getRoadNames() { return currentRoadNames; }
 
     public static List<Road> fetchRoads() throws Exception {
         var conn = (HttpURLConnection) new URL("https://www.desmos.com/calc-states/production/kthhplyigl?cb20221031").openConnection();
@@ -212,7 +219,6 @@ public class CrunchData {
                 for (var e : byLine.entrySet())
                     result.add(new Road(e.getKey(), road.paved(), e.getValue()));
             } else if (road.name().toLowerCase().contains("ring") && road.segments().stream().allMatch(s -> Math.max(Math.abs(s.p1X()), Math.abs(s.p1Z())) < 50000 && Math.round(Math.max(Math.abs(s.p1X()), Math.abs(s.p1Z()))) % 5000 == 0)) {
-                // small ring roads dropped
             } else if (road.name().toLowerCase().contains("ring") || road.name().toLowerCase().contains("diamond")) {
                 result.add(new Road(road.name().substring(0, road.name().lastIndexOf(' ')), road.paved(), road.segments()));
             } else {
@@ -357,5 +363,54 @@ public class CrunchData {
         String severity = angle < 60 ? "slight " : angle > 120 ? "sharp " : "";
         return "Make a " + severity + side + " turn on to the " + to.name();
     }
-    
+
+    public static void ensureNetwork() throws Exception {
+        if (cachedNetwork == null)
+            cachedNetwork = snapToGrid(renameRoads(subdivideSegments(fetchRoads())));
+    }
+
+    public static List<Road> calculateRoute(double startX, double startZ, double endX, double endZ) throws Exception {
+        ensureNetwork();
+        currentPath = mergeCollinear(findPath(startX, startZ, endX, endZ, cachedNetwork));
+        currentSteps.clear();
+        currentDirections.clear();
+        currentRoadNames.clear();
+        for (int i = 0; i < currentPath.size(); i++) {
+            var road = currentPath.get(i);
+            for (var seg : road.segments()) {
+                currentSteps.add(new double[]{seg.p1X(), seg.p1Z()});
+                currentRoadNames.add(road.name());
+            }
+            if (i == currentPath.size() - 1) {
+                var last = road.segments().get(road.segments().size() - 1);
+                currentSteps.add(new double[]{last.p2X(), last.p2Z()});
+                currentRoadNames.add("destination");
+            }
+            double dist = road.segments().stream().mapToDouble(s -> Math.hypot(s.p2X() - s.p1X(), s.p2Z() - s.p1Z())).sum();
+            if (road.name().equals("open nether"))
+                currentDirections.add("Fly " + Math.round(dist) + " blocks " + heading(road) + " through open nether");
+            else
+                currentDirections.add("Continue " + Math.round(dist) + " blocks " + heading(road) + " on the " + road.name());
+            if (i < currentPath.size() - 1) {
+                String turn = describeTurn(road, currentPath.get(i + 1));
+                if (turn != null) currentDirections.add(turn);
+            }
+        }
+        return currentPath;
+    }
+
+    public static List<double[]> getSteps() { return currentSteps; }
+    public static List<String> getDirections() { return currentDirections; }
+    public static List<Road> getPath() { return currentPath; }
+    public static String getClipboardString() { return currentSteps.stream().map(p -> "(" + Math.round(p[0]) + "," + Math.round(p[1]) + ")").collect(Collectors.joining(", ")); }
+
+    public static double parseDistance(String input) {
+        input = input.trim().toLowerCase();
+        double mul = 1;
+        if (input.endsWith("k")) { mul = 1_000; input = input.substring(0, input.length() - 1); }
+        else if (input.endsWith("m")) { mul = 1_000_000; input = input.substring(0, input.length() - 1); }
+        else if (input.endsWith("r")) { input = String.valueOf((Math.random() * 2 - 1) * parseDistance(input.substring(0, input.length() - 1))); }
+        return Double.parseDouble(input) * mul;
+    }
+
 }

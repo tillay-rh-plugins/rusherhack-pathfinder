@@ -7,9 +7,9 @@ public class PluginMain extends Plugin {
 	@Override
 	public void onLoad() {
 		this.getLogger().info("Plugin rusherhack-pathfinder loaded");
-		var pathfinderHudElement = new PathfinderHudElement();
-		RusherHackAPI.getHudManager().registerFeature(pathfinderHudElement);
-		RusherHackAPI.getCommandManager().registerFeature(new PathfindCommand(pathfinderHudElement));
+		RusherHackAPI.getHudManager().registerFeature(new PathfinderHudElement());
+		RusherHackAPI.getCommandManager().registerFeature(new PathfindCommand());
+		RusherHackAPI.getWindowManager().registerFeature(new PathingWindow());
 	}
 
 	@Override
