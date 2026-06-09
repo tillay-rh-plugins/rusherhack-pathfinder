@@ -1,6 +1,7 @@
 package lol.tilley.pathfinder;
 
 import net.minecraft.network.chat.Component;
+import org.rusherhack.client.api.RusherHackAPI;
 import org.rusherhack.client.api.feature.window.ResizeableWindow;
 import org.rusherhack.client.api.ui.window.content.ComboContent;
 import org.rusherhack.client.api.ui.window.content.component.ButtonComponent;

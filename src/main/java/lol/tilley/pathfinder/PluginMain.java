@@ -8,7 +8,6 @@ public class PluginMain extends Plugin {
 	public void onLoad() {
 		this.getLogger().info("Plugin rusherhack-pathfinder loaded");
 		RusherHackAPI.getHudManager().registerFeature(new PathfinderHudElement());
-		RusherHackAPI.getCommandManager().registerFeature(new PathfindCommand());
 		RusherHackAPI.getWindowManager().registerFeature(new PathingWindow());
 	}
 

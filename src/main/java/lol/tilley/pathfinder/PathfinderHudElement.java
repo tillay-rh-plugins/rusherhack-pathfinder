@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import org.lwjgl.system.MemoryUtil;
+import org.rusherhack.client.api.events.client.EventUpdate;
 import org.rusherhack.client.api.events.render.EventRender3D;
 import org.rusherhack.client.api.feature.hud.ResizeableHudElement;
 import org.rusherhack.client.api.render.IRenderer2D;
@@ -25,8 +26,11 @@ public class PathfinderHudElement extends ResizeableHudElement {
     public static PathfinderHudElement INSTANCE;
 
     private enum Arrow { SHARP_LEFT, LEFT, SLIGHT_LEFT, OFF_LEFT, SHARP_RIGHT, RIGHT, SLIGHT_RIGHT, OFF_RIGHT, DEST }
+    private final java.util.ArrayDeque<Double> speedSamples = new java.util.ArrayDeque<>();
     private final EnumMap<Arrow, DynamicTexture> arrows = new EnumMap<>(Arrow.class);
     private static final int SIGN_BG = new Color(7, 99, 48, 255).getRGB();
+    private static final int SIGN_HEIGHT = 52;
+    private static final int INFO_HEIGHT = 32;
 
     public PathfinderHudElement() {
         super("Pathfinder");
@@ -59,6 +63,15 @@ public class PathfinderHudElement extends ResizeableHudElement {
         }
     }
 
+    private void drawCentered(PoseStack stack, IFontRenderer fr, String text, double colX, double colW, double y, float scale, int color) {
+        double x = colX + (colW - fr.getStringWidth(text) * scale) / 2;
+        stack.pushPose();
+        stack.translate(x, y, 0);
+        stack.scale(scale, scale, 1);
+        fr.drawString(text, 0, 0, color);
+        stack.popPose();
+    }
+
     public void resetIndex() { currentIndex = 0; }
 
     @Override
@@ -68,65 +81,76 @@ public class PathfinderHudElement extends ResizeableHudElement {
         double px = mc.player.getX(), pz = mc.player.getZ();
         while (currentIndex < steps.size() && Math.hypot(px - steps.get(currentIndex)[0], pz - steps.get(currentIndex)[1]) < 10)
             currentIndex++;
+        double spd = Math.hypot(mc.player.getDeltaMovement().x, mc.player.getDeltaMovement().z) * 20;
+        speedSamples.addLast(spd);
+        if (speedSamples.size() > 16 * 20) speedSamples.pollFirst();
     }
 
     @Override
     public void renderContent(RenderContext context, double mouseX, double mouseY) {
+
+        var steps = getSteps();
+        var names = getRoadNames();
+        if (steps.isEmpty() || mc.player == null || currentIndex >= steps.size()) return;
+
         IRenderer2D renderer = this.getRenderer();
         IFontRenderer fr = this.getFontRenderer();
         PoseStack stack = context.pose();
-        var steps = getSteps();
-        var names = getRoadNames();
 
-        renderer.drawRoundedRectangle(0, 0, getWidth(), getHeight(), 5, true, false, 0, SIGN_BG, 0);
-
-        if (steps.isEmpty() || mc.player == null) {
-            fr.drawString("No route", 8, getHeight() / 2 - fr.getFontHeight() / 2, -1);
-            return;
-        }
-        if (currentIndex >= steps.size()) {
-            fr.drawString("Arrived!", 8, getHeight() / 2 - fr.getFontHeight() / 2, -1);
-            return;
-        }
+        renderer.drawRoundedRectangle(0, 0, getWidth(), getHeight(), 5, true, false, 0, Color.BLACK.getRGB(), 0);
+        renderer.drawRoundedRectangle(0, 0, getWidth(), SIGN_HEIGHT, 5, true, false, 0, SIGN_BG, 0);
 
         double px = mc.player.getX(), pz = mc.player.getZ();
-        var next = steps.get(currentIndex);
-        double distNext = Math.hypot(px - next[0], pz - next[1]);
+        double distNext = Math.hypot(px - steps.get(currentIndex)[0], pz - steps.get(currentIndex)[1]);
         double total = distNext;
         for (int i = currentIndex; i < steps.size() - 1; i++)
             total += Math.hypot(steps.get(i + 1)[0] - steps.get(i)[0], steps.get(i + 1)[1] - steps.get(i)[1]);
 
         Arrow arrow = resolveArrow(currentIndex);
-        String dist = distNext >= 1000 ? String.format("%.1f km", distNext / 1000) : String.format("%.0f m", distNext);
-        String road = names.get(currentIndex);
-        road = road.isEmpty() ? road : road.substring(0, 1).toUpperCase() + road.substring(1);
-
-        int iconSize = 26;
-        double pad = 6;
-        double textX = pad;
-
+        int pad = 6, iconSize = 26, textX = pad;
         if (arrow != null) {
             DynamicTexture tex = arrows.get(arrow);
             if (tex != null) {
-                renderer.drawTextureRectangle(tex.getId(), iconSize, iconSize, pad, pad, iconSize, iconSize, 0);
+                renderer.drawTextureRectangle(tex.getId(), iconSize, iconSize, pad, (SIGN_HEIGHT - iconSize) / 2.0, iconSize, iconSize, 0);
                 textX = pad + iconSize + 4;
             }
         }
 
+        String dist = distNext >= 1000 ? String.format("%.1f km", distNext / 1000) : String.format("%.0f m", distNext);
+        String road = names.get(currentIndex);
+        road = road.isEmpty() ? road : Character.toUpperCase(road.charAt(0)) + road.substring(1);
+
+        double distH = fr.getFontHeight() * 1.5, roadH = fr.getFontHeight();
+        double signTextY = (SIGN_HEIGHT - distH - 3 - roadH) / 2.0;
+
         stack.pushPose();
-        stack.translate(textX, pad, 0);
+        stack.translate(textX, signTextY, 0);
         stack.scale(1.5f, 1.5f, 1);
         fr.drawString(dist, 0, 0, -1);
         stack.popPose();
+        fr.drawString(road, textX, signTextY + distH + 3, new Color(210, 210, 210).getRGB());
 
-        fr.drawString(road, textX, pad + fr.getFontHeight() * 1.5f + 4, new Color(210, 210, 210).getRGB());
+        double speed = speedSamples.isEmpty() ? 0 : speedSamples.stream().mapToDouble(Double::doubleValue).average().orElse(0);
+        double etaSecs = speed > 0.5 ? total / speed : -1;
 
-        String remaining = total >= 1000 ? String.format("%.1f km remaining", total / 1000) : String.format("%.0f m remaining", total);
-        stack.pushPose();
-        stack.translate(pad, getHeight() - fr.getFontHeight() * 0.7f - 3, 0);
-        stack.scale(0.7f, 0.7f, 1);
-        fr.drawString(remaining, 0, 0, Color.LIGHT_GRAY.getRGB());
-        stack.popPose();
+        String[] nums  = {
+                etaSecs > 0 ? java.time.LocalTime.now().plusSeconds((long) etaSecs).format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")) : "--:--",
+                etaSecs > 0 ? (etaSecs < 3600 ? String.valueOf((int)(etaSecs / 60)) : String.format("%.0f", etaSecs / 3600)) : "--",
+                total >= 1000 ? String.format("%.1f", total / 1000) : String.format("%.0f", total)
+        };
+        String[] units = { "arrival", etaSecs > 0 && etaSecs < 3600 ? "min" : "hr", total >= 1000 ? "km" : "m" };
+        int green = new Color(0, 220, 90).getRGB(), gray = Color.LIGHT_GRAY.getRGB();
+        int[] numColors  = { -1, green, -1 };
+        int[] unitColors = { gray, green, gray };
+
+        double colW = getWidth() / 3.0;
+        double numH = fr.getFontHeight() * 1.2, lblH = fr.getFontHeight() * 0.75;
+        double infoTextY = SIGN_HEIGHT + (INFO_HEIGHT - numH - 2 - lblH) / 2.0;
+
+        for (int i = 0; i < 3; i++) {
+            drawCentered(stack, fr, nums[i],  colW * i, colW, infoTextY,           1.2f,  numColors[i]);
+            drawCentered(stack, fr, units[i], colW * i, colW, infoTextY + numH + 2, 0.75f, unitColors[i]);
+        }
     }
 
     private Arrow resolveArrow(int index) {
@@ -156,7 +180,7 @@ public class PathfinderHudElement extends ResizeableHudElement {
     public double getWidth() { return 180; }
 
     @Override
-    public double getHeight() { return 55; }
+    public double getHeight() { return SIGN_HEIGHT + INFO_HEIGHT; }
 
     @Override
     public boolean shouldDrawBackground() { return false; }
@@ -164,7 +188,7 @@ public class PathfinderHudElement extends ResizeableHudElement {
     @Subscribe
     private void onRender3D(EventRender3D event) {
         var steps = getSteps();
-        if (mc.player == null || mc.level == null || steps.isEmpty()) return;
+        if (steps.isEmpty() || mc.player == null || currentIndex >= steps.size()) return;
         IRenderer3D renderer = event.getRenderer();
         renderer.begin(event.getMatrixStack());
         renderer.setLineWidth(5f);

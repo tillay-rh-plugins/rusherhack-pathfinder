@@ -18,8 +18,8 @@ public class CrunchData {
     private static final List<String> currentRoadNames = new ArrayList<>();
     public static List<String> getRoadNames() { return currentRoadNames; }
 
-    public static List<Road> fetchRoads() throws Exception {
-        var conn = (HttpURLConnection) new URL("https://www.desmos.com/calc-states/production/kthhplyigl?cb20221031").openConnection();
+    public static List<Road> fetchRoads(String jsonUrl) throws Exception {
+        var conn = (HttpURLConnection) new URL(jsonUrl).openConnection();
         var sb = new StringBuilder();
         try (var r = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
             String line;
@@ -364,13 +364,13 @@ public class CrunchData {
         return "Make a " + severity + side + " turn on to the " + to.name();
     }
 
-    public static void ensureNetwork() throws Exception {
+    public static void ensureNetwork(String jsonUrl) throws Exception {
         if (cachedNetwork == null)
-            cachedNetwork = snapToGrid(renameRoads(subdivideSegments(fetchRoads())));
+            cachedNetwork = snapToGrid(renameRoads(subdivideSegments(fetchRoads(jsonUrl))));
     }
 
     public static List<Road> calculateRoute(double startX, double startZ, double endX, double endZ) throws Exception {
-        ensureNetwork();
+        ensureNetwork("https://www.desmos.com/calc-states/production/kthhplyigl?cb20221031");
         currentPath = mergeCollinear(findPath(startX, startZ, endX, endZ, cachedNetwork));
         currentSteps.clear();
         currentDirections.clear();
