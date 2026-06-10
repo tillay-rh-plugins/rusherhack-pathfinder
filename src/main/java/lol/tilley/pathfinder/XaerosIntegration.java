@@ -73,7 +73,7 @@ public class XaerosIntegration {
         traveledDark    = makeFeature(TRAVELED_ID  + "Dark",  true,  ColorHelper.getColor(80,  80,  80,  255), 1.25f);
         traveledLight   = makeFeature(TRAVELED_ID  + "Light", true,  ColorHelper.getColor(160, 160, 160, 255), 1f);
         remainingDark   = makeFeature(REMAINING_ID + "Dark",  false, ColorHelper.getColor(70,   104,  209, 255), 1.25f);
-        remainingLight  = makeFeature(REMAINING_ID + "Light", false, ColorHelper.getColor(75, 148, 248, 255), 0.1f);
+        remainingLight  = makeFeature(REMAINING_ID + "Light", false, ColorHelper.getColor(75, 148, 248, 255), 1f);
         Globals.drawManager.registry().register(traveledDark);
         Globals.drawManager.registry().register(traveledLight);
         Globals.drawManager.registry().register(remainingDark);
