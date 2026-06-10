@@ -4,7 +4,6 @@ import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import org.lwjgl.system.MemoryUtil;
-import org.rusherhack.client.api.events.client.EventUpdate;
 import org.rusherhack.client.api.events.render.EventRender3D;
 import org.rusherhack.client.api.feature.hud.ResizeableHudElement;
 import org.rusherhack.client.api.render.IRenderer2D;
@@ -12,6 +11,8 @@ import org.rusherhack.client.api.render.IRenderer3D;
 import org.rusherhack.client.api.render.RenderContext;
 import org.rusherhack.client.api.render.font.IFontRenderer;
 import org.rusherhack.core.event.subscribe.Subscribe;
+import org.rusherhack.core.setting.BooleanSetting;
+
 
 import java.awt.*;
 import java.io.IOException;
@@ -31,6 +32,8 @@ public class PathfinderHudElement extends ResizeableHudElement {
     private static final int SIGN_BG = new Color(7, 99, 48, 255).getRGB();
     private static final int SIGN_HEIGHT = 52;
     private static final int INFO_HEIGHT = 32;
+
+    private final BooleanSetting renderTracer = new BooleanSetting("RenderTracer", "Render a tracer on the highway outlining the route", true);
 
     public PathfinderHudElement() {
         super("Pathfinder");
@@ -188,12 +191,28 @@ public class PathfinderHudElement extends ResizeableHudElement {
     @Subscribe
     private void onRender3D(EventRender3D event) {
         var steps = getSteps();
-        if (steps.isEmpty() || mc.player == null || currentIndex >= steps.size()) return;
+        if (steps.isEmpty() || mc.player == null || currentIndex >= steps.size() || !renderTracer.getValue()) {
+            XaerosIntegration.unregister();
+            return;
+        }
         IRenderer3D renderer = event.getRenderer();
         renderer.begin(event.getMatrixStack());
-        renderer.setLineWidth(5f);
-        for (int i = 0; i < steps.size() - 1; i++) {
-            renderer.drawLine(steps.get(i)[0], 120d, steps.get(i)[1], steps.get(i + 1)[0], 120d, steps.get(i + 1)[1], Color.BLUE.getRGB());
+        for (int i = Math.max(0, currentIndex - 1); i < steps.size() - 1; i++) {
+            double[] a = steps.get(i), b = steps.get(i + 1);
+            double dist = Math.hypot(b[0] - a[0], b[1] - a[1]);
+            if (dist <= 100) {
+                renderer.drawLine(a[0], 120d, a[1], b[0], 120d, b[1], Color.BLUE.getRGB());
+            } else {
+                int chunks = (int) Math.ceil(dist / 100);
+                for (int j = 0; j < chunks; j++) {
+                    double t1 = (double) j / chunks, t2 = (double) (j + 1) / chunks;
+                    renderer.drawLine(
+                            lerp(a[0], b[0], t1), 120d, lerp(a[1], b[1], t1),
+                            lerp(a[0], b[0], t2), 120d, lerp(a[1], b[1], t2),
+                            Color.BLUE.getRGB()
+                    );
+                }
+            }
         }
         renderer.end();
     }

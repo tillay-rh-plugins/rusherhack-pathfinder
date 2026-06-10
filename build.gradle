@@ -1,13 +1,13 @@
 plugins {
 	id 'idea'
 	id 'java'
-	id 'fabric-loom' version '1.9-SNAPSHOT'
+	id 'fabric-loom' version '1.15-SNAPSHOT'
 	id 'maven-publish'
 }
 
 version = project.plugin_version
 group = project.maven_group
-archivesBaseName = project.plugin_name
+base.archivesName = project.plugin_name
 
 configurations {
 	rusherhackApi
@@ -37,6 +37,14 @@ repositories {
 		name = 'ParchmentMC'
 		url = 'https://maven.parchmentmc.org'
 	}
+
+	maven {
+		url = "https://api.modrinth.com/maven"
+	}
+
+	maven {
+		url = "https://maven.2b2t.vc/releases"
+	}
 }
 
 dependencies {
@@ -49,6 +57,11 @@ dependencies {
 		officialMojangMappings()
 		parchment("org.parchmentmc.data:parchment-${project.parchment_version}@zip")
 	}
+
+	modCompileOnly("maven.modrinth:xaeroplus:${project.xaeroplus_version}+fabric-${project.minecraft_version}")
+	modCompileOnly("maven.modrinth:xaeros-world-map:fabric-${project.minecraft_version}-${project.worldmap_version}")
+	modCompileOnly("maven.modrinth:xaeros-minimap:fabric-${project.minecraft_version}-${project.minimap_version}")
+	modImplementation("com.github.rfresh2:baritone-fabric:${project.minecraft_version}-SNAPSHOT")
 
 	//rusherhack api
 	rusherhackApi "org.rusherhack:rusherhack-api:$minecraft_version-SNAPSHOT"
@@ -116,6 +129,10 @@ loom {
 	//disable run configs
 	runConfigs.configureEach {
 		ideConfigGenerated = false
+	}
+
+	mixin {
+		useLegacyMixinAp = false
 	}
 }
 

@@ -105,7 +105,7 @@ public class CrunchData {
         return (t >= 0 && t <= 1 && s >= 0 && s <= 1) ? t : null;
     }
 
-    private static double lerp(double a, double b, double t) { return a + t * (b - a); }
+    public static double lerp(double a, double b, double t) { return a + t * (b - a); }
 
     private static List<RoadSegment> parseSegments(JsonArray xVals, JsonArray yVals) {
         var segs = new ArrayList<RoadSegment>();
@@ -400,8 +400,8 @@ public class CrunchData {
     }
 
     public static List<double[]> getSteps() { return currentSteps; }
+    public static void clearSteps() { currentSteps.clear(); }
     public static List<String> getDirections() { return currentDirections; }
-    public static List<Road> getPath() { return currentPath; }
     public static String getClipboardString() { return currentSteps.stream().map(p -> "(" + Math.round(p[0]) + "," + Math.round(p[1]) + ")").collect(Collectors.joining(", ")); }
 
     public static double parseDistance(String input) {
