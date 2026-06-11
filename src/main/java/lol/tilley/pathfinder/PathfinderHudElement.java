@@ -82,8 +82,8 @@ public class PathfinderHudElement extends ResizeableHudElement {
         var steps = getSteps();
         if (steps.isEmpty() || mc.player == null) return;
         double px = mc.player.getX(), pz = mc.player.getZ();
-        while (currentIndex < steps.size() && Math.hypot(px - steps.get(currentIndex)[0], pz - steps.get(currentIndex)[1]) < 10)
-            currentIndex++;
+        double[] cs = CrunchData.closestSegment(steps, px, pz);
+        currentIndex = (int) cs[0] + 1;
         double spd = Math.hypot(mc.player.getDeltaMovement().x, mc.player.getDeltaMovement().z) * 20;
         speedSamples.addLast(spd);
         if (speedSamples.size() > 16 * 20) speedSamples.pollFirst();
@@ -151,7 +151,7 @@ public class PathfinderHudElement extends ResizeableHudElement {
         double infoTextY = SIGN_HEIGHT + (INFO_HEIGHT - numH - 2 - lblH) / 2.0;
 
         for (int i = 0; i < 3; i++) {
-            drawCentered(stack, fr, nums[i],  colW * i, colW, infoTextY,           1.2f,  numColors[i]);
+            drawCentered(stack, fr, nums[i],  colW * i, colW, infoTextY,1.2f,  numColors[i]);
             drawCentered(stack, fr, units[i], colW * i, colW, infoTextY + numH + 2, 0.75f, unitColors[i]);
         }
     }

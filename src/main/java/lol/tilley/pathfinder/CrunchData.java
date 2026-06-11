@@ -369,6 +369,20 @@ public class CrunchData {
             cachedNetwork = snapToGrid(renameRoads(subdivideSegments(fetchRoads(jsonUrl))));
     }
 
+    public static double[] closestSegment(List<double[]> steps, double px, double pz) {
+        double best = Double.MAX_VALUE, t = 0;
+        int seg = 0;
+        for (int i = 0; i < steps.size() - 1; i++) {
+            double ax = steps.get(i)[0], az = steps.get(i)[1];
+            double dx = steps.get(i+1)[0] - ax, dz = steps.get(i+1)[1] - az;
+            double len2 = dx*dx + dz*dz;
+            double ct = len2 < 1e-20 ? 0 : Math.max(0, Math.min(1, ((px-ax)*dx + (pz-az)*dz) / len2));
+            double d = Math.hypot(px - (ax + ct*dx), pz - (az + ct*dz));
+            if (d < best) { best = d; seg = i; t = ct; }
+        }
+        return new double[]{seg, t};
+    }
+
     public static List<Road> calculateRoute(double startX, double startZ, double endX, double endZ) throws Exception {
         ensureNetwork("https://www.desmos.com/calc-states/production/kthhplyigl?cb20221031");
         currentPath = mergeCollinear(findPath(startX, startZ, endX, endZ, cachedNetwork));

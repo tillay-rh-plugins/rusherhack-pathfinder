@@ -29,15 +29,8 @@ public class XaerosIntegration {
         var player = Minecraft.getInstance().player;
         if (player == null || steps.size() < 2) { splitSeg = 0; splitT = 0; return; }
         double px = player.getX(), pz = player.getZ();
-        double best = Double.MAX_VALUE;
-        for (int i = 0; i < steps.size() - 1; i++) {
-            double ax = steps.get(i)[0], az = steps.get(i)[1];
-            double dx = steps.get(i + 1)[0] - ax, dz = steps.get(i + 1)[1] - az;
-            double len2 = dx * dx + dz * dz;
-            double t = len2 < 1e-20 ? 0 : Math.max(0, Math.min(1, ((px - ax) * dx + (pz - az) * dz) / len2));
-            double d = Math.hypot(px - (ax + t * dx), pz - (az + t * dz));
-            if (d < best) { best = d; splitSeg = i; splitT = t; }
-        }
+        double[] cs = CrunchData.closestSegment(steps, px, pz);
+        splitSeg = (int) cs[0]; splitT = cs[1];
     }
 
     private static List<Line> buildLines(List<double[]> steps, int scale, boolean traveled) {
