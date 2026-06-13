@@ -1,6 +1,9 @@
 package lol.tilley.pathfinder;
 
+import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.item.Items;
 import org.lwjgl.glfw.GLFW;
 import org.rusherhack.client.api.feature.window.ResizeableWindow;
 import org.rusherhack.client.api.ui.window.content.ComboContent;
@@ -13,6 +16,7 @@ import org.rusherhack.client.api.ui.window.view.RichTextView;
 import org.rusherhack.client.api.ui.window.view.SimpleView;
 import org.rusherhack.client.api.ui.window.view.TabbedView;
 import org.rusherhack.client.api.ui.window.view.WindowView;
+import org.rusherhack.client.api.utils.InventoryUtils;
 import org.rusherhack.core.utils.Timer;
 
 import java.util.List;
@@ -73,12 +77,15 @@ public class PathingWindow extends ResizeableWindow {
         ButtonComponent pathButton = new ButtonComponent(this, "Path", this::calculatePath);
         ButtonComponent copyButton = new ButtonComponent(this, "Copy Points", this::copyToClipboard);
         ButtonComponent resetButton = new ButtonComponent(this, "Reset", this::resetPath);
+        ButtonComponent baritoneButton = new ButtonComponent(this, "Start Baritone", this::startBaritone);
         pathButton.setWidth(60);
-        copyButton.setWidth(60);
+        copyButton.setWidth(80);
         resetButton.setWidth(60);
+        baritoneButton.setWidth(80);
         buttonCombo.addContent(pathButton);
         buttonCombo.addContent(copyButton);
         buttonCombo.addContent(resetButton);
+        buttonCombo.addContent(baritoneButton);
 
         this.directionsView = new RichTextView("Directions", this) {
             @Override
@@ -141,8 +148,34 @@ public class PathingWindow extends ResizeableWindow {
 
     private void resetPath() {
         directionsView.clear();
+        BaritoneIntegration.stop();
         XaerosIntegration.unregister();
         clearSteps();
+    }
+
+    private void startBaritone() {
+        var names = getRoadNames();
+        if (getSteps().isEmpty()) {
+            directionsView.add(Component.literal("Error: No path calculated.").withStyle(ChatFormatting.RED), -1);
+            return;
+        }
+        if (mc.player == null || !mc.player.level().dimensionType().ultraWarm()) {
+            directionsView.add(Component.literal("Error: Must be in the nether").withStyle(ChatFormatting.RED), -1);
+            return;
+        }
+        if (!mc.player.getItemBySlot(EquipmentSlot.CHEST).is(Items.ELYTRA)) {
+            directionsView.add(Component.literal("Error: Must have an elytra equipped").withStyle(ChatFormatting.RED), -1);
+            return;
+        }
+        if (InventoryUtils.getItemCount(Items.FIREWORK_ROCKET, true, true) < 1) {
+            directionsView.add(Component.literal("Error: Must have fireworks in inventory").withStyle(ChatFormatting.RED), -1);
+            return;
+        }
+        double[] entry = getSteps().get(0);
+        for (int i = 0; i < getSteps().size(); i++) {
+            if (!names.get(i).equals("open nether")) { entry = getSteps().get(i); break; }
+        }
+        BaritoneIntegration.engage((int) entry[0], (int) entry[1]);
     }
 
     @Override

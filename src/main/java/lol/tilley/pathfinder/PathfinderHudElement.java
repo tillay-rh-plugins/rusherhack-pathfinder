@@ -12,6 +12,7 @@ import org.rusherhack.client.api.render.RenderContext;
 import org.rusherhack.client.api.render.font.IFontRenderer;
 import org.rusherhack.core.event.subscribe.Subscribe;
 import org.rusherhack.core.setting.BooleanSetting;
+import org.rusherhack.client.api.events.client.EventUpdate;
 
 
 import java.awt.*;
@@ -77,8 +78,8 @@ public class PathfinderHudElement extends ResizeableHudElement {
 
     public void resetIndex() { currentIndex = 0; }
 
-    @Override
-    public void tick() {
+    @Subscribe
+    private void onUpdate(EventUpdate event) {
         var steps = getSteps();
         if (steps.isEmpty() || mc.player == null) return;
         double px = mc.player.getX(), pz = mc.player.getZ();
@@ -87,6 +88,7 @@ public class PathfinderHudElement extends ResizeableHudElement {
         double spd = Math.hypot(mc.player.getDeltaMovement().x, mc.player.getDeltaMovement().z) * 20;
         speedSamples.addLast(spd);
         if (speedSamples.size() > 16 * 20) speedSamples.pollFirst();
+        BaritoneIntegration.baritoneTick();
     }
 
     @Override
