@@ -31,6 +31,7 @@ public class PathfinderHudElement extends ResizeableHudElement {
     private final java.util.ArrayDeque<Double> speedSamples = new java.util.ArrayDeque<>();
     private final EnumMap<Arrow, DynamicTexture> arrows = new EnumMap<>(Arrow.class);
     private boolean arrived = false;
+    private boolean finished = false;
     private final java.util.ArrayDeque<Double> destDistSamples = new java.util.ArrayDeque<>();
 
     private static final int SIGN_BG = new Color(7, 99, 48, 255).getRGB();
@@ -83,6 +84,7 @@ public class PathfinderHudElement extends ResizeableHudElement {
     public void resetIndex() {
         currentIndex = 0;
         arrived = false;
+        finished = false;
         destDistSamples.clear();
     }
 
@@ -106,6 +108,7 @@ public class PathfinderHudElement extends ResizeableHudElement {
             }
         } else {
             destDistSamples.clear();
+            if (arrived) finished = true;
         }
         BaritoneIntegration.baritoneTick();
     }
@@ -115,7 +118,7 @@ public class PathfinderHudElement extends ResizeableHudElement {
 
         var steps = getSteps();
         var names = getRoadNames();
-        if (steps.isEmpty() || mc.player == null || currentIndex >= steps.size()) return;
+        if (steps.isEmpty() || mc.player == null || finished) return;
 
         IRenderer2D renderer = this.getRenderer();
         IFontRenderer fr = this.getFontRenderer();
@@ -218,7 +221,7 @@ public class PathfinderHudElement extends ResizeableHudElement {
     @Subscribe
     private void onRender3D(EventRender3D event) {
         var steps = getSteps();
-        if (steps.isEmpty() || mc.player == null || currentIndex >= steps.size() || !renderTracer.getValue()) {
+        if (steps.isEmpty() || mc.player == null || finished || !renderTracer.getValue()) {
             XaerosIntegration.unregister();
             return;
         }
