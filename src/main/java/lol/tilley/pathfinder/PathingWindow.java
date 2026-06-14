@@ -131,6 +131,7 @@ public class PathingWindow extends ResizeableWindow {
         }
         double ex = parseDistance(endXField.getValue());
         double ez = parseDistance(endZField.getValue());
+        BaritoneIntegration.reset();
         try {
             calculateRoute(sx, sz, ex, ez);
         } catch (Exception e) {
@@ -148,13 +149,12 @@ public class PathingWindow extends ResizeableWindow {
 
     private void resetPath() {
         directionsView.clear();
-        BaritoneIntegration.stop();
+        BaritoneIntegration.reset();
         XaerosIntegration.unregister();
         clearSteps();
     }
 
     private void startBaritone() {
-        var names = getRoadNames();
         if (getSteps().isEmpty()) {
             directionsView.add(Component.literal("Error: No path calculated.").withStyle(ChatFormatting.RED), -1);
             return;
@@ -171,11 +171,7 @@ public class PathingWindow extends ResizeableWindow {
             directionsView.add(Component.literal("Error: Must have fireworks in inventory").withStyle(ChatFormatting.RED), -1);
             return;
         }
-        double[] entry = getSteps().get(0);
-        for (int i = 0; i < getSteps().size(); i++) {
-            if (!names.get(i).equals("open nether")) { entry = getSteps().get(i); break; }
-        }
-        BaritoneIntegration.engage((int) entry[0], (int) entry[1]);
+        BaritoneIntegration.engage();
     }
 
     @Override
