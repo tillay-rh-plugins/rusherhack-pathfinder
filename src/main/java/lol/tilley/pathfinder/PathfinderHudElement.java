@@ -30,9 +30,13 @@ public class PathfinderHudElement extends ResizeableHudElement {
     private enum Arrow { SHARP_LEFT, LEFT, SLIGHT_LEFT, OFF_LEFT, SHARP_RIGHT, RIGHT, SLIGHT_RIGHT, OFF_RIGHT, DEST }
     private final java.util.ArrayDeque<Double> speedSamples = new java.util.ArrayDeque<>();
     private final EnumMap<Arrow, DynamicTexture> arrows = new EnumMap<>(Arrow.class);
+    private boolean arrived = false;
+    private final java.util.ArrayDeque<Double> destDistSamples = new java.util.ArrayDeque<>();
+
     private static final int SIGN_BG = new Color(7, 99, 48, 255).getRGB();
     private static final int SIGN_HEIGHT = 52;
     private static final int INFO_HEIGHT = 32;
+
 
     private final BooleanSetting renderTracer = new BooleanSetting("RenderTracer", "Render a tracer on the highway outlining the route", true);
 
@@ -76,7 +80,11 @@ public class PathfinderHudElement extends ResizeableHudElement {
         stack.popPose();
     }
 
-    public void resetIndex() { currentIndex = 0; }
+    public void resetIndex() {
+        currentIndex = 0;
+        arrived = false;
+        destDistSamples.clear();
+    }
 
     @Subscribe
     private void onUpdate(EventUpdate event) {
@@ -88,6 +96,17 @@ public class PathfinderHudElement extends ResizeableHudElement {
         double spd = Math.hypot(mc.player.getDeltaMovement().x, mc.player.getDeltaMovement().z) * 20;
         speedSamples.addLast(spd);
         if (speedSamples.size() > 16 * 20) speedSamples.pollFirst();
+        double[] dest = steps.get(steps.size() - 1);
+        double dd = Math.hypot(px - dest[0], pz - dest[1]);
+        if (dd < 20) {
+            destDistSamples.addLast(dd);
+            if (destDistSamples.size() > 20) {
+                double prev = destDistSamples.pollFirst();
+                if (dd > prev) arrived = true;
+            }
+        } else {
+            destDistSamples.clear();
+        }
         BaritoneIntegration.baritoneTick();
     }
 
@@ -124,6 +143,12 @@ public class PathfinderHudElement extends ResizeableHudElement {
         String dist = distNext >= 1000 ? String.format("%.1f km", distNext / 1000) : String.format("%.0f m", distNext);
         String road = names.get(currentIndex);
         road = road.isEmpty() ? road : Character.toUpperCase(road.charAt(0)) + road.substring(1);
+
+        if (arrived) {
+            dist = "Arrived";
+            double[] d = steps.get(steps.size() - 1);
+            road = "(" + (int) d[0] + ", " + (int) d[1] + ")";
+        }
 
         double distH = fr.getFontHeight() * 1.5, roadH = fr.getFontHeight();
         double signTextY = (SIGN_HEIGHT - distH - 3 - roadH) / 2.0;
